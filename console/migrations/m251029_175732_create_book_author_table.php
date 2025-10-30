@@ -13,13 +13,18 @@ class m251029_175732_create_book_author_table extends Migration
      */
     public function safeUp():void
     {
+        $tableOptions = null;
+        if ($this->db->driverName === 'mysql') {
+            $tableOptions = 'CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB';
+        }
+
         $this->createTable('{{%book_author}}', [
             'id' => $this->primaryKey(),
             'book_id' => $this->integer()->notNull()->comment('ID книги'),
             'author_id' => $this->integer()->notNull()->comment('ID автора'),
-            'created_at' => $this->integer()->notNull()->comment('Дата создания'),
-            'updated_at' => $this->integer()->comment('Дата обновления'),
-        ]);
+            'created_at' => $this->timestamp()->defaultExpression('CURRENT_TIMESTAMP')->notNull()->comment('Дата создания'),
+            'updated_at' => $this->timestamp()->defaultExpression('CURRENT_TIMESTAMP')->append('ON UPDATE CURRENT_TIMESTAMP')->null()->comment('Дата обновления'),
+        ], $tableOptions);
 
         $this->addForeignKey(
             'fk-book_author-book_id',
