@@ -26,8 +26,8 @@ class UserController extends Controller
     {
         // Проверяем, есть ли уже пользователи
         if (
-            !$this->confirm('В базе уже есть пользователи. Продолжить создание нового пользователя?') &&
-            User::find()->count() > 0
+            User::find()->count() > 0 &&
+            !$this->confirm('В базе уже есть пользователи. Продолжить создание нового пользователя?')
         ) {
             return ExitCode::OK;
         }
