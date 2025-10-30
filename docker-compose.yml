@@ -33,10 +33,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  #pgsql:
-  #  image: postgres:9.5
-  #  environment:
-  #    - POSTGRES_DB=yii2advanced
-  #    - POSTGRES_USER=yii2advanced
-  #    - POSTGRES_PASSWORD=secret
