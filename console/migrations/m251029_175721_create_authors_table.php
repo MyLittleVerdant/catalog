@@ -20,6 +20,9 @@ class m251029_175721_create_authors_table extends Migration
         $this->createTable('{{%authors}}', [
             'id' => $this->primaryKey(),
             'full_name' => $this->string()->notNull()->comment('Полное имя автора'),
+            'created_at' => $this->timestamp()->defaultExpression('CURRENT_TIMESTAMP')->notNull()->comment('Дата создания'),
+            'updated_at' => $this->timestamp()->defaultExpression('CURRENT_TIMESTAMP')->append('ON UPDATE CURRENT_TIMESTAMP')->notNull()->comment('Дата обновления'),
+            'deleted_at' => $this->timestamp()->null()->defaultValue(null)->comment('Дата удаления'),
         ], $tableOptions);
     }
 
