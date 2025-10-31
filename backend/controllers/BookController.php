@@ -21,10 +21,10 @@ class BookController extends Controller
     public function __construct(
         $id,
         $module,
-        private ?BookService $bookService = null,
+        private readonly BookService $bookService,
         $config = []
-    ) {
-        $this->bookService ??= new BookService();
+    )
+    {
         parent::__construct($id, $module, $config);
     }
 
@@ -35,9 +35,9 @@ class BookController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'allow'   => true,
+                        'allow' => true,
                         'actions' => ['index', 'view'],
-                        'roles'   => ['?', '@'],
+                        'roles' => ['?', '@'],
                     ],
                     [
                         'allow' => true,
@@ -45,8 +45,8 @@ class BookController extends Controller
                     ],
                 ],
             ],
-            'verbs'  => [
-                'class'   => VerbFilter::class,
+            'verbs' => [
+                'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
                 ],
@@ -60,7 +60,7 @@ class BookController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
         return $this->render('index', [
-            'searchModel'  => $searchModel,
+            'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
         ]);
     }

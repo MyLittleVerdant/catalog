@@ -20,10 +20,10 @@ class AuthorController extends Controller
     public function __construct(
         $id,
         $module,
-        private ?AuthorService $authorService = null,
+        private readonly AuthorService $authorService,
         $config = []
-    ) {
-        $this->authorService ??= new AuthorService();
+    )
+    {
         parent::__construct($id, $module, $config);
     }
 
