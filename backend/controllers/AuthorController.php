@@ -12,11 +12,21 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use common\models\Author;
-use common\models\Subscription;
+use common\services\AuthorService;
 use backend\models\AuthorSearch;
 
 class AuthorController extends Controller
 {
+    public function __construct(
+        $id,
+        $module,
+        private ?AuthorService $authorService = null,
+        $config = []
+    ) {
+        $this->authorService ??= new AuthorService();
+        parent::__construct($id, $module, $config);
+    }
+
     public function behaviors(): array
     {
         return [
@@ -58,10 +68,10 @@ class AuthorController extends Controller
     /**
      * @throws NotFoundHttpException
      */
-    public function actionView($id): string
+    public function actionView(int $id): string
     {
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $this->authorService->findAuthor($id),
         ]);
     }
 
@@ -82,9 +92,9 @@ class AuthorController extends Controller
      * @throws Exception
      * @throws NotFoundHttpException
      */
-    public function actionUpdate($id): Response|string
+    public function actionUpdate(int $id): Response|string
     {
-        $model = $this->findModel($id);
+        $model = $this->authorService->findAuthor($id);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
@@ -100,9 +110,9 @@ class AuthorController extends Controller
      * @throws Throwable
      * @throws NotFoundHttpException
      */
-    public function actionDelete($id): Response
+    public function actionDelete(int $id): Response
     {
-        $this->findModel($id)->delete();
+        $this->authorService->findAuthor($id)->delete();
         return $this->redirect(['index']);
     }
 
@@ -116,63 +126,11 @@ class AuthorController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        // Проверяем существование автора
-        $author = Author::findOne($id);
-        if (!$author) {
-            return $this->asJson([
-                'success' => false,
-                'message' => 'Автор с указанным ID не найден',
-            ]);
-        }
-
         $phone = Yii::$app->request->post('phone');
+        $result = $this->authorService->subscribe($id, $phone);
 
-        if (empty($phone)) {
-            return $this->asJson([
-                'success' => false,
-                'message' => 'Телефон обязателен для заполнения',
-            ]);
-        }
-
-        // Проверяем, нет ли уже подписки с таким телефоном для этого автора
-        $existingSubscription = Subscription::find()
-            ->where(['author_id' => $id, 'phone' => $phone])
-            ->one();
-
-        if ($existingSubscription) {
-            return $this->asJson([
-                'success' => false,
-                'message' => 'Вы уже подписаны на этого автора',
-            ]);
-        }
-
-        $subscription = new Subscription();
-        $subscription->author_id = $id;
-        $subscription->phone = $phone;
-
-        if ($subscription->save()) {
-            return $this->asJson([
-                'success' => true,
-                'message' => 'Вы успешно подписались на уведомления о новых книгах',
-            ]);
-        }
-
-        return $this->asJson([
-            'success' => false,
-            'message' => 'Ошибка при сохранении подписки',
-            'errors' => $subscription->errors,
-        ]);
+        return $this->asJson($result);
     }
 
-    /**
-     * @throws NotFoundHttpException
-     */
-    protected function findModel($id): Author
-    {
-        if (($model = Author::findOne($id)) !== null) {
-            return $model;
-        }
-        throw new NotFoundHttpException('Автор не найден.');
-    }
 }
 
