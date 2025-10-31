@@ -17,8 +17,9 @@ class ReportController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
+                        'actions' => ['authors-top'],
                         'allow' => true,
-                        'roles' => ['@'],
+                        'roles' => ['?', '@'],
                     ],
                 ],
             ],
