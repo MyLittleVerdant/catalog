@@ -2,6 +2,7 @@
 
 namespace backend\controllers;
 
+use common\models\Author;
 use Throwable;
 use Yii;
 use yii\db\Exception;
@@ -11,14 +12,22 @@ use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use common\models\Book;
-use common\models\Author;
+use common\services\BookService;
 use backend\models\BookSearch;
 use yii\web\Response;
-use yii\helpers\FileHelper;
-use yii\web\UploadedFile;
 
 class BookController extends Controller
 {
+    public function __construct(
+        $id,
+        $module,
+        private ?BookService $bookService = null,
+        $config = []
+    ) {
+        $this->bookService ??= new BookService();
+        parent::__construct($id, $module, $config);
+    }
+
     public function behaviors(): array
     {
         return [
@@ -59,17 +68,13 @@ class BookController extends Controller
     /**
      * @throws NotFoundHttpException
      */
-    public function actionView($id): string
+    public function actionView(int $id): string
     {
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $this->bookService->findBook($id),
         ]);
     }
 
-    /**
-     * @throws Exception
-     * @throws \yii\base\Exception
-     */
     public function actionCreate(): Response|string
     {
         $model = new Book();
@@ -82,25 +87,7 @@ class BookController extends Controller
             ]);
         }
 
-        $model->coverImageFile = UploadedFile::getInstance($model, 'coverImageFile');
-        if ($model->coverImageFile) {
-            $uploadDir = Yii::getAlias('@backend/web/uploads/books');
-            FileHelper::createDirectory($uploadDir);
-            $fileName = uniqid('cover_', true) . '.' . $model->coverImageFile->extension;
-            $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-            if ($model->coverImageFile->saveAs($fullPath)) {
-                $model->cover_image_url = '/uploads/books/' . $fileName;
-            }
-        }
-
-        if ($model->save(false)) {
-            // Сохраняем связи с авторами
-            $this->saveAuthors($model);
-            
-            // Перезагружаем связи и вызываем событие после сохранения связей
-            $model->refresh();
-            $model->trigger(Book::EVENT_AFTER_INSERT);
-            
+        if ($this->bookService->saveBook($model, true)) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -111,13 +98,12 @@ class BookController extends Controller
     }
 
     /**
-     * @throws Exception
      * @throws NotFoundHttpException
      * @throws \yii\base\Exception
      */
-    public function actionUpdate($id): Response|string
+    public function actionUpdate(int $id): Response|string
     {
-        $model = $this->findModel($id);
+        $model = $this->bookService->findBook($id);
 
         if (!$model->load(Yii::$app->request->post()) || !$model->validate()) {
             return $this->render('update', [
@@ -126,25 +112,7 @@ class BookController extends Controller
             ]);
         }
 
-        $model->coverImageFile = UploadedFile::getInstance($model, 'coverImageFile');
-        if ($model->coverImageFile) {
-            $uploadDir = Yii::getAlias('@backend/web/uploads/books');
-            FileHelper::createDirectory($uploadDir);
-            $fileName = uniqid('cover_', true) . '.' . $model->coverImageFile->extension;
-            $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-            if ($model->coverImageFile->saveAs($fullPath)) {
-                $model->cover_image_url = '/uploads/books/' . $fileName;
-            }
-        }
-
-        if ($model->save(false)) {
-            // Сохраняем связи с авторами
-            $this->saveAuthors($model);
-            
-            // Перезагружаем связи и вызываем событие после сохранения связей
-            $model->refresh();
-            $model->trigger(Book::EVENT_AFTER_UPDATE);
-            
+        if ($this->bookService->saveBook($model, false)) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -159,41 +127,10 @@ class BookController extends Controller
      * @throws StaleObjectException
      * @throws NotFoundHttpException
      */
-    public function actionDelete($id): Response
+    public function actionDelete(int $id): Response
     {
-        $this->findModel($id)->delete();
+        $this->bookService->findBook($id)->delete();
         return $this->redirect(['index']);
-    }
-
-    /**
-     * @throws NotFoundHttpException
-     */
-    protected function findModel($id): Book
-    {
-        if (($model = Book::findOne($id)) !== null) {
-            return $model;
-        }
-        throw new NotFoundHttpException('Книга не найдена.');
-    }
-
-    /**
-     * Сохраняет связи книги с авторами
-     * @param Book $model
-     */
-    protected function saveAuthors(Book $model): void
-    {
-        // Удаляем все старые связи
-        $model->unlinkAll('authors', true);
-
-        // Создаем новые связи
-        if (!empty($model->authorIds)) {
-            foreach ($model->authorIds as $authorId) {
-                $author = Author::findOne($authorId);
-                if ($author) {
-                    $model->link('authors', $author);
-                }
-            }
-        }
     }
 }
 
