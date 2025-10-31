@@ -2,6 +2,7 @@
 
 namespace common\models;
 
+use common\listeners\BookNotificationListener;
 use yii\base\InvalidConfigException;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
@@ -85,6 +86,15 @@ class Book extends ActiveRecord
         if (!$this->isNewRecord) {
             $this->authorIds = array_column($this->authors, 'id');
         }
+    }
+
+    public function init(): void
+    {
+        parent::init();
+        
+        // Подписываемся на события после создания и обновления
+        $this->on(self::EVENT_AFTER_INSERT, [BookNotificationListener::class, 'handleBookSaved']);
+        $this->on(self::EVENT_AFTER_UPDATE, [BookNotificationListener::class, 'handleBookSaved']);
     }
 
     public function attributeLabels(): array

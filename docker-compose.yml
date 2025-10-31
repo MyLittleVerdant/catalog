@@ -4,7 +4,6 @@ services:
 
   backend:
     build: backend
-    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - 21080:80
     volumes:

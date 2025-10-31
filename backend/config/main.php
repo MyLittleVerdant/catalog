@@ -13,6 +13,11 @@ return [
     'bootstrap' => ['log'],
     'modules' => [],
     'components' => [
+        'smspilot' => [
+            'class' => \common\components\SmspilotService::class,
+            'apiKey' => getenv('SMSPILOT_API_KEY') ?: '',
+            'from' => getenv('SMSPILOT_FROM') ?: 'BOOKS',
+        ],
         'request' => [
             'csrfParam' => '_csrf-backend',
         ],

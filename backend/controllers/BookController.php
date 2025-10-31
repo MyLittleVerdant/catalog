@@ -96,6 +96,11 @@ class BookController extends Controller
         if ($model->save(false)) {
             // Сохраняем связи с авторами
             $this->saveAuthors($model);
+            
+            // Перезагружаем связи и вызываем событие после сохранения связей
+            $model->refresh();
+            $model->trigger(Book::EVENT_AFTER_INSERT);
+            
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -135,6 +140,11 @@ class BookController extends Controller
         if ($model->save(false)) {
             // Сохраняем связи с авторами
             $this->saveAuthors($model);
+            
+            // Перезагружаем связи и вызываем событие после сохранения связей
+            $model->refresh();
+            $model->trigger(Book::EVENT_AFTER_UPDATE);
+            
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
