@@ -5,6 +5,8 @@ namespace common\services;
 use common\components\SmspilotService;
 use common\models\Book;
 use common\models\Subscription;
+use common\repositories\SubscriptionRepository;
+use Exception;
 use Yii;
 
 /**
@@ -13,26 +15,40 @@ use Yii;
 class SubscriptionService
 {
     public function __construct(
-        private readonly ?SmspilotService $smsService = null
+        private readonly SubscriptionRepository $subscriptionRepository,
+        private readonly ?SmspilotService       $smsService = null
     )
     {
     }
 
     /**
-     * Получает все подписки по списку ID авторов
+     * Отправляет уведомления всем подписчикам авторов книги
      *
-     * @param array $authorIds Массив ID авторов
-     * @return Subscription[]
+     * @param Book $book Книга
+     * @param bool $isNew Флаг новой книги
+     * @return int Количество успешно отправленных уведомлений
      */
-    public function getSubscriptionsByAuthorIds(array $authorIds): array
+    public function notifySubscribers(Book $book, bool $isNew): int
     {
-        if (empty($authorIds)) {
-            return [];
+        $authors = $book->authors;
+
+        if (empty($authors)) {
+            // У книги нет авторов - некому отправлять уведомления
+            return 0;
         }
 
-        return Subscription::find()
-            ->where(['author_id' => $authorIds])
-            ->all();
+        $authorIds = array_column($authors, 'id');
+        // Получим все подписки по списку ID авторов
+        $subscriptions = $this->subscriptionRepository->getSubscriptionsByAuthorIds($authorIds);
+
+        $sentCount = 0;
+        foreach ($subscriptions as $subscription) {
+            if ($this->sendNotification($subscription, $book, $isNew)) {
+                $sentCount++;
+            }
+        }
+
+        return $sentCount;
     }
 
     /**
@@ -43,12 +59,12 @@ class SubscriptionService
      * @param bool $isNew Флаг новой книги
      * @return bool Успешность отправки
      */
-    public function sendNotification(Subscription $subscription, Book $book, bool $isNew): bool
+    private function sendNotification(Subscription $subscription, Book $book, bool $isNew): bool
     {
         $authorName = $subscription->author->full_name ?? 'автора';
         $action = $isNew ? 'вышла новая книга' : 'обновлена книга';
 
-        // Формируем текст SMS сообщения (максимум 160 символов рекомендуется для 1 SMS)
+        // Формируем текст SMS сообщения
         $smsMessage = sprintf(
             "Уведомление: %s '%s' от %s. ISBN: %s",
             $action,
@@ -57,7 +73,7 @@ class SubscriptionService
             $book->isbn ?? 'N/A'
         );
 
-        // Обрезаем сообщение до 160 символов (стандартный лимит для 1 SMS)
+        // Обрезаем сообщение до 160 символов
         if (mb_strlen($smsMessage) > 160) {
             $smsMessage = mb_substr($smsMessage, 0, 157) . '...';
         }
@@ -88,42 +104,13 @@ class SubscriptionService
             );
             return false;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Yii::error(
                 "Exception while sending SMS to {$subscription->phone}: {$e->getMessage()}",
                 'notification'
             );
             return false;
         }
-    }
-
-    /**
-     * Отправляет уведомления всем подписчикам авторов книги
-     *
-     * @param Book $book Книга
-     * @param bool $isNew Флаг новой книги
-     * @return int Количество успешно отправленных уведомлений
-     */
-    public function notifySubscribers(Book $book, bool $isNew): int
-    {
-        $authors = $book->authors;
-
-        if (empty($authors)) {
-            // У книги нет авторов - некому отправлять уведомления
-            return 0;
-        }
-
-        $authorIds = array_column($authors, 'id');
-        $subscriptions = $this->getSubscriptionsByAuthorIds($authorIds);
-
-        $sentCount = 0;
-        foreach ($subscriptions as $subscription) {
-            if ($this->sendNotification($subscription, $book, $isNew)) {
-                $sentCount++;
-            }
-        }
-
-        return $sentCount;
     }
 }
 

@@ -11,12 +11,18 @@ use yii\base\Event;
  */
 class BookNotificationListener
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptionService
+    )
+    {
+    }
+
     /**
      * Обрабатывает событие создания/обновления книги
      *
      * @param Event $event Событие
      */
-    public static function handleBookSaved(Event $event): void
+    public function handleBookSaved(Event $event): void
     {
         /** @var Book $book */
         $book = $event->sender;
@@ -25,8 +31,7 @@ class BookNotificationListener
         $isNew = $event->name === Book::EVENT_AFTER_INSERT;
 
         // Используем сервис для отправки уведомлений
-        $subscriptionService = new SubscriptionService();
-        $subscriptionService->notifySubscribers($book, $isNew);
+        $this->subscriptionService->notifySubscribers($book, $isNew);
     }
 }
 

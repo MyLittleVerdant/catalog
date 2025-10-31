@@ -17,7 +17,7 @@ class BookService
 {
     /**
      * Находит книгу по ID или выбрасывает исключение
-     * 
+     *
      * @param int|string $id ID книги
      * @return Book
      * @throws NotFoundHttpException
@@ -29,56 +29,6 @@ class BookService
             throw new NotFoundHttpException('Книга не найдена.');
         }
         return $book;
-    }
-
-    /**
-     * Сохраняет связи книги с авторами
-     * 
-     * @param Book $book Книга
-     */
-    public function saveAuthors(Book $book): void
-    {
-        // Удаляем все старые связи
-        $book->unlinkAll('authors', true);
-
-        // Создаем новые связи
-        if (!empty($book->authorIds)) {
-            foreach ($book->authorIds as $authorId) {
-                $author = Author::findOne($authorId);
-                if ($author) {
-                    $book->link('authors', $author);
-                }
-            }
-        }
-    }
-
-    /**
-     * Обрабатывает загрузку обложки книги
-     *
-     * @param Book $book Книга
-     * @return bool Успешно ли загружена обложка
-     * @throws Exception
-     */
-    public function handleCoverImageUpload(Book $book): bool
-    {
-        $book->coverImageFile = UploadedFile::getInstance($book, 'coverImageFile');
-        
-        if (!$book->coverImageFile) {
-            return false;
-        }
-
-        $uploadDir = Yii::getAlias('@backend/web/uploads/books');
-        FileHelper::createDirectory($uploadDir);
-        
-        $fileName = uniqid('cover_', true) . '.' . $book->coverImageFile->extension;
-        $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-        
-        if ($book->coverImageFile->saveAs($fullPath)) {
-            $book->cover_image_url = '/uploads/books/' . $fileName;
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -108,6 +58,54 @@ class BookService
         $book->trigger($eventName);
 
         return true;
+    }
+
+    /**
+     * Сохраняет связи книги с авторами
+     *
+     * @param Book $book Книга
+     */
+    private function saveAuthors(Book $book): void
+    {
+        // Удаляем все старые связи
+        $book->unlinkAll('authors', true);
+
+        // Создаем новые связи
+        if (!empty($book->authorIds)) {
+            foreach ($book->authorIds as $authorId) {
+                $author = Author::findOne($authorId);
+                if ($author) {
+                    $book->link('authors', $author);
+                }
+            }
+        }
+    }
+
+    /**
+     * Обрабатывает загрузку обложки книги
+     *
+     * @param Book $book Книга
+     * @return void Успешно ли загружена обложка
+     * @throws Exception
+     */
+    private function handleCoverImageUpload(Book $book): void
+    {
+        $book->coverImageFile = UploadedFile::getInstance($book, 'coverImageFile');
+
+        if (!$book->coverImageFile) {
+            return;
+        }
+
+        $uploadDir = Yii::getAlias('@backend/web/uploads/books');
+        FileHelper::createDirectory($uploadDir);
+
+        $fileName = uniqid('cover_', true) . '.' . $book->coverImageFile->extension;
+        $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
+
+        if ($book->coverImageFile->saveAs($fullPath)) {
+            $book->cover_image_url = '/uploads/books/' . $fileName;
+        }
+
     }
 }
 
