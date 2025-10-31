@@ -8,6 +8,7 @@ return [
     'authors/create' => 'author/create',
     'authors/<id:\d+>' => 'author/view',
     'authors/<id:\d+>/update' => 'author/update',
+    'reports/authors-top' => 'report/authors-top',
 ];
 
 
