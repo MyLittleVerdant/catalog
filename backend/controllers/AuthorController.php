@@ -12,6 +12,7 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use common\models\Author;
+use common\models\Subscription;
 use backend\models\AuthorSearch;
 
 class AuthorController extends Controller
@@ -24,7 +25,7 @@ class AuthorController extends Controller
                 'rules' => [
                     [
                         'allow' => true,
-                        'actions' => ['index', 'view'],
+                        'actions' => ['index', 'view', 'subscribe'],
                         'roles' => ['?', '@'],
                     ],
                     [
@@ -37,6 +38,7 @@ class AuthorController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
+                    'subscribe' => ['POST'],
                 ],
             ],
         ];
@@ -102,6 +104,64 @@ class AuthorController extends Controller
     {
         $this->findModel($id)->delete();
         return $this->redirect(['index']);
+    }
+
+    /**
+     * Подписка на уведомления о новых книгах автора
+     * @param int $id ID автора
+     * @return Response
+     * @throws Exception
+     */
+    public function actionSubscribe(int $id): Response
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // Проверяем существование автора
+        $author = Author::findOne($id);
+        if (!$author) {
+            return $this->asJson([
+                'success' => false,
+                'message' => 'Автор с указанным ID не найден',
+            ]);
+        }
+
+        $phone = Yii::$app->request->post('phone');
+
+        if (empty($phone)) {
+            return $this->asJson([
+                'success' => false,
+                'message' => 'Телефон обязателен для заполнения',
+            ]);
+        }
+
+        // Проверяем, нет ли уже подписки с таким телефоном для этого автора
+        $existingSubscription = Subscription::find()
+            ->where(['author_id' => $id, 'phone' => $phone])
+            ->one();
+
+        if ($existingSubscription) {
+            return $this->asJson([
+                'success' => false,
+                'message' => 'Вы уже подписаны на этого автора',
+            ]);
+        }
+
+        $subscription = new Subscription();
+        $subscription->author_id = $id;
+        $subscription->phone = $phone;
+
+        if ($subscription->save()) {
+            return $this->asJson([
+                'success' => true,
+                'message' => 'Вы успешно подписались на уведомления о новых книгах',
+            ]);
+        }
+
+        return $this->asJson([
+            'success' => false,
+            'message' => 'Ошибка при сохранении подписки',
+            'errors' => $subscription->errors,
+        ]);
     }
 
     /**
