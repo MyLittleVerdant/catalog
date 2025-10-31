@@ -11,6 +11,7 @@ use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use common\models\Book;
+use common\models\Author;
 use backend\models\BookSearch;
 use yii\web\Response;
 use yii\helpers\FileHelper;
@@ -69,13 +70,15 @@ class BookController extends Controller
      * @throws Exception
      * @throws \yii\base\Exception
      */
-    public function actionCreate()
+    public function actionCreate(): Response|string
     {
         $model = new Book();
+        $authors = Author::find()->orderBy('full_name')->all();
 
         if (!$model->load(Yii::$app->request->post()) || !$model->validate()) {
             return $this->render('create', [
                 'model' => $model,
+                'authors' => $authors,
             ]);
         }
 
@@ -91,11 +94,14 @@ class BookController extends Controller
         }
 
         if ($model->save(false)) {
+            // Сохраняем связи с авторами
+            $this->saveAuthors($model);
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
         return $this->render('create', [
             'model' => $model,
+            'authors' => Author::find()->orderBy('full_name')->all(),
         ]);
     }
 
@@ -104,13 +110,14 @@ class BookController extends Controller
      * @throws NotFoundHttpException
      * @throws \yii\base\Exception
      */
-    public function actionUpdate($id)
+    public function actionUpdate($id): Response|string
     {
         $model = $this->findModel($id);
 
         if (!$model->load(Yii::$app->request->post()) || !$model->validate()) {
             return $this->render('update', [
                 'model' => $model,
+                'authors' => Author::find()->orderBy('full_name')->all(),
             ]);
         }
 
@@ -126,11 +133,14 @@ class BookController extends Controller
         }
 
         if ($model->save(false)) {
+            // Сохраняем связи с авторами
+            $this->saveAuthors($model);
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
         return $this->render('update', [
             'model' => $model,
+            'authors' => Author::find()->orderBy('full_name')->all(),
         ]);
     }
 
@@ -154,6 +164,26 @@ class BookController extends Controller
             return $model;
         }
         throw new NotFoundHttpException('Книга не найдена.');
+    }
+
+    /**
+     * Сохраняет связи книги с авторами
+     * @param Book $model
+     */
+    protected function saveAuthors(Book $model): void
+    {
+        // Удаляем все старые связи
+        $model->unlinkAll('authors', true);
+
+        // Создаем новые связи
+        if (!empty($model->authorIds)) {
+            foreach ($model->authorIds as $authorId) {
+                $author = Author::findOne($authorId);
+                if ($author) {
+                    $model->link('authors', $author);
+                }
+            }
+        }
     }
 }
 

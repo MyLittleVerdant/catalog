@@ -34,6 +34,17 @@ $this->params['breadcrumbs'][] = $this->title;
             'release_year:date',
             'cover_image_url:image',
             'description:ntext',
+            [
+                'label' => 'Авторы',
+                'value' => function ($model) {
+                    $authors = $model->authors;
+                    if (empty($authors)) {
+                        return 'Не указаны';
+                    }
+                    return implode(', ', \yii\helpers\ArrayHelper::getColumn($authors, 'full_name'));
+                },
+                'format' => 'raw',
+            ],
             'created_at:datetime',
             'updated_at:datetime',
         ],

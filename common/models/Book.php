@@ -2,7 +2,9 @@
 
 namespace common\models;
 
+use yii\base\InvalidConfigException;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\Expression;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
 use common\components\SoftDeleteActiveQuery;
@@ -21,11 +23,15 @@ use yii\web\UploadedFile;
  * @property int $created_at
  * @property int|null $updated_at
  * @property int|null $deleted_at
+ * @property Author[] $authors
  */
 class Book extends ActiveRecord
 {
     /** @var UploadedFile|null */
-    public ?UploadedFile $coverImageFile = null;
+    public $coverImageFile;
+
+    /** @var array Массив ID выбранных авторов для формы */
+    public $authorIds = [];
 
     public static function tableName(): string
     {
@@ -64,11 +70,21 @@ class Book extends ActiveRecord
             [['release_year'], 'safe'],
             [['title', 'isbn', 'cover_image_url'], 'string', 'max' => 255],
             [['isbn'], 'unique'],
+            [['authorIds'], 'each', 'rule' => ['integer']],
             [
                 ['coverImageFile'], 'file', 'skipOnEmpty' => true, 'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
                 'maxSize'                                 => 5 * 1024 * 1024
             ],
         ];
+    }
+
+    public function afterFind(): void
+    {
+        parent::afterFind();
+        // Загружаем связанные ID авторов для формы
+        if (!$this->isNewRecord) {
+            $this->authorIds = array_column($this->authors, 'id');
+        }
     }
 
     public function attributeLabels(): array
@@ -90,6 +106,17 @@ class Book extends ActiveRecord
     public static function find(): SoftDeleteActiveQuery
     {
         return new SoftDeleteActiveQuery(static::class);
+    }
+
+    /**
+     * Связь many-to-many с авторами через pivot таблицу book_author
+     * @return ActiveQuery
+     * @throws InvalidConfigException
+     */
+    public function getAuthors(): ActiveQuery
+    {
+        return $this->hasMany(Author::class, ['id' => 'author_id'])
+            ->viaTable('{{%book_author}}', ['book_id' => 'id']);
     }
 }
 

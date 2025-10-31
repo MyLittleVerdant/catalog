@@ -2,7 +2,9 @@
 
 namespace common\models;
 
+use yii\base\InvalidConfigException;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\db\Expression;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
@@ -16,6 +18,7 @@ use common\components\SoftDeleteActiveQuery;
  * @property string|null $created_at
  * @property string|null $updated_at
  * @property string|null $deleted_at
+ * @property Book[] $books
  */
 class Author extends ActiveRecord
 {
@@ -69,6 +72,17 @@ class Author extends ActiveRecord
     public static function find(): SoftDeleteActiveQuery
     {
         return new SoftDeleteActiveQuery(static::class);
+    }
+
+    /**
+     * Связь many-to-many с книгами через pivot таблицу book_author
+     * @return ActiveQuery
+     * @throws InvalidConfigException
+     */
+    public function getBooks(): ActiveQuery
+    {
+        return $this->hasMany(Book::class, ['id' => 'book_id'])
+            ->viaTable('{{%book_author}}', ['author_id' => 'id']);
     }
 }
 

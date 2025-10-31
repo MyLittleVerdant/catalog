@@ -2,10 +2,12 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
+use common\models\Author;
 
 /* @var $this yii\web\View */
 /* @var $model common\models\Book */
 /* @var $form yii\widgets\ActiveForm */
+/* @var $authors Author[] */
 ?>
 
 <div class="book-form">
@@ -26,6 +28,16 @@ use yii\widgets\ActiveForm;
     <?= $form->field($model, 'coverImageFile')->fileInput() ?>
 
     <?= $form->field($model, 'description')->textarea(['rows' => 6]) ?>
+
+    <?= $form->field($model, 'authorIds')->dropDownList(
+        \yii\helpers\ArrayHelper::map($authors, 'id', 'full_name'),
+        [
+            'multiple' => true,
+            'size' => 10,
+            'class' => 'form-select',
+            'style' => 'height: auto;',
+        ]
+    )->label('Авторы (используйте Ctrl/Cmd для выбора нескольких)') ?>
 
     <div class="form-group">
         <?= Html::submitButton('Сохранить', ['class' => 'btn btn-primary']) ?>
